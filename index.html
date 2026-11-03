@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>자동 채용 공고 찾기</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans KR -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 16px;
+      background-color: #f8fafc;
+      color: #0f172a;
+      word-break: keep-all;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-12">
+
+  <!-- Header Banner & Top Announcement -->
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+        <span>🔍</span> 자동 채용 공고 찾기
+      </h1>
+      <div class="bg-indigo-800/80 text-indigo-100 text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-indigo-500/50 text-center">
+        ⚠️ 확인일 기준 정보입니다. 지원 전 원문을 꼭 확인하세요.
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-4 pt-6 sm:px-6">
+
+    <!-- Tab Navigation (전체 공고 / 관심 공고 / 마이페이지) -->
+    <div class="flex border-b border-slate-200 mb-6">
+      <button id="tabAll" onclick="switchTab('all')" 
+        class="flex-1 py-3 text-center font-bold text-base border-b-2 border-indigo-600 text-indigo-600 transition-all">
+        전체 공고
+      </button>
+      <button id="tabFavorites" onclick="switchTab('favorites')" 
+        class="flex-1 py-3 text-center font-bold text-base border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5">
+        <span>★ 관심 공고</span>
+        <span id="favoriteCountBadge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+      <button id="tabMypage" onclick="switchTab('mypage')" 
+        class="flex-1 py-3 text-center font-bold text-base border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5">
+        <span>👤 마이페이지</span>
+      </button>
+    </div>
+
+    <!-- 4 Summary Stat Cards -->
+    <section id="statsSection" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs font-medium text-slate-500 block mb-1">전체 공고 수</span>
+        <span id="statTotal" class="text-xl sm:text-2xl font-black text-slate-900">0</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs font-medium text-slate-500 block mb-1">모집 중</span>
+        <span id="statActive" class="text-xl sm:text-2xl font-black text-indigo-600">0</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs font-medium text-slate-500 block mb-1">마감</span>
+        <span id="statClosed" class="text-xl sm:text-2xl font-black text-slate-400">0</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-center">
+        <span class="text-xs font-medium text-slate-500 block mb-1">신입 공고 수</span>
+        <span id="statNewbie" class="text-xl sm:text-2xl font-black text-emerald-600">0</span>
+      </div>
+    </section>
+
+    <!-- Summary Card: 이번 주 마감 n건 -->
+    <section id="urgentSection" class="bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl p-4 sm:p-5 text-white shadow-md mb-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🚨</span>
+        <div>
+          <h3 class="font-bold text-base sm:text-lg">마감 임박 공고 현황</h3>
+          <p class="text-xs sm:text-sm text-red-100">마감일이 3일 이내인 공고를 확인하세요.</p>
+        </div>
+      </div>
+      <div class="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-center">
+        <span class="text-xs block text-red-100 font-medium">이번 주 마감</span>
+        <span id="urgentCountBadge" class="text-xl sm:text-2xl font-black">0건</span>
+      </div>
+    </section>
+
+    <!-- My Criteria (내 조건) Section -->
+    <section id="criteriaSection" class="bg-indigo-50 rounded-2xl p-4 sm:p-6 shadow-sm border border-indigo-200 mb-6">
+      <h2 class="text-base font-bold text-indigo-900 mb-3 flex items-center gap-2">
+        <span>⭐</span> 내 조건 맞춤 설정 (조건 충족 공고 '추천' & 최상단 정렬)
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label for="myKeyword" class="block text-sm font-semibold text-indigo-900 mb-1">희망 직무 키워드</label>
+          <input type="text" id="myKeyword" placeholder="예: 연구개발, 제조기술"
+            class="w-full px-3 py-2.5 rounded-xl border border-indigo-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+        </div>
+        <div>
+          <label for="myLocation" class="block text-sm font-semibold text-indigo-900 mb-1">희망 근무지</label>
+          <input type="text" id="myLocation" placeholder="예: 청주, 당진, 미기재"
+            class="w-full px-3 py-2.5 rounded-xl border border-indigo-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+        </div>
+        <div>
+          <label for="mySupport" class="block text-sm font-semibold text-indigo-900 mb-1">지원 구분</label>
+          <select id="mySupport"
+            class="w-full px-3 py-2.5 rounded-xl border border-indigo-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+            <option value="">전체</option>
+            <option value="신입">신입</option>
+            <option value="경력">경력</option>
+            <option value="신입/경력">신입/경력</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter & Search Section -->
+    <section id="filterSection" class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- Search Input -->
+        <div class="sm:col-span-3">
+          <label for="searchInput" class="block text-sm font-semibold text-slate-700 mb-1">전체 키워드 검색</label>
+          <div class="relative">
+            <input type="text" id="searchInput" placeholder="회사명, 공고 제목, 직무 등으로 검색..."
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base transition-all">
+            <span class="absolute left-3.5 top-3 text-slate-400">🔎</span>
+          </div>
+        </div>
+
+        <!-- Support Type Filter -->
+        <div>
+          <label for="supportFilter" class="block text-sm font-semibold text-slate-700 mb-1">지원 구분 필터</label>
+          <select id="supportFilter"
+            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+            <option value="전체">전체 지원 구분</option>
+          </select>
+        </div>
+
+        <!-- Location Filter -->
+        <div>
+          <label for="locationFilter" class="block text-sm font-semibold text-slate-700 mb-1">근무지 필터</label>
+          <select id="locationFilter"
+            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+            <option value="전체">전체 근무지</option>
+          </select>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="flex items-end">
+          <button id="resetBtn"
+            class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all text-base flex items-center justify-center gap-1">
+            <span>🔄</span> 필터 초기화
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats & Company Filter Bar -->
+    <div id="countBar" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
+      <div class="text-sm font-medium text-slate-600">
+        검색 결과 <span id="jobCount" class="text-indigo-600 font-bold text-base">0</span>건
+      </div>
+      <!-- 기업별 구분 필터 및 마감일 정렬 -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-1.5">
+          <label for="companyFilter" class="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">🏢 기업별:</label>
+          <select id="companyFilter"
+            class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <option value="전체">전체 기업</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <label for="sortOrder" class="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">⏳ 정렬:</label>
+          <select id="sortOrder"
+            class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <option value="urgent">마감 임박순 (기본)</option>
+            <option value="asc">마감일 빠른 순</option>
+            <option value="desc">마감일 느린 순</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- MYPAGE CONTAINER -->
+    <div id="mypageContainer" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+          <span>💡</span> 나의 핵심 역량 관리
+        </h2>
+        <p class="text-sm text-slate-600 mb-4">
+          보유하신 역량이나 기술 키워드(예: 딥러닝, 제어, 인사, 회로, 연구개발 등)를 쉼표(,)로 구분하여 입력해 주세요. 입력한 역량 키워드별로 매칭되는 채용 공고를 아래에서 바로 확인하실 수 있습니다.
+        </p>
+        <div>
+          <label for="competencyInput" class="block text-sm font-semibold text-slate-700 mb-1">역량 키워드 (쉼표 구분)</label>
+          <div class="flex gap-2">
+            <input type="text" id="competencyInput" placeholder="예: 연구개발, 제조기술, 회로, 인사"
+              class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base">
+            <button onclick="saveCompetencies()" 
+              class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all text-base shadow-sm">
+              저장 및 매칭
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competency Match Results Container -->
+      <div id="competencyResultsContainer" class="space-y-6">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- Job Cards Container -->
+    <div id="jobCardsContainer" class="space-y-6">
+      <!-- Cards rendered via JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
+      <p class="text-slate-400 text-lg mb-2">😭</p>
+      <p class="text-slate-600 font-medium" id="emptyStateText">검색 결과와 일치하는 채용 공고가 없습니다.</p>
+    </div>
+
+  </main>
+
+  <script>
+    // Embedded Raw JSON Job Postings
+    const rawJobsData = [
+      {
+        "공고ID": "4조-전예지",
+        "회사": "LS머트리얼즈",
+        "공고 제목": "연구개발 신입 채용",
+        "직무": "연구개발",
+        "근무지": "미기재",
+        "지원 구분": "신입",
+        "고용 형태": "정규직 (수습기간 3개월)",
+        "마감일": "23:59",
+        "확인일": "2026-11-02",
+        "원문 URL": "https://lsmaterials-recruit.career.greetinghr.com/ko/o/242160",
+        "출처 구분": "기업 공식 채용 페이지",
+        "우대사항": ["전기/전자공학 등 유관 전공 학위 보유자 우대", "회로 설계 및 통신 설계 경력자 우대", "BMS(Battery Management System) 개발 경력자 우대", "Toeic Speaking IM1 이상 우대"]
+      },
+      {
+        "공고ID": "4조-안도영",
+        "회사": "SK키파운드리",
+        "공고 제목": "제조기술 Engineer 채용",
+        "직무": "제조기술 Engineer",
+        "근무지": "청주",
+        "지원 구분": "신입",
+        "고용 형태": "정규직",
+        "마감일": "2026-11-08",
+        "확인일": "2026-11-02",
+        "원문 URL": "https://www.skcareers.com/Recruit/Detail/R262363",
+        "출처 구분": "SK Careers",
+        "우대사항": ["이공계열 전공자 우대", "반도체 제조공정 유관 경험자 우대"]
+      },
+      {
+        "공고ID": "G01",
+        "회사": "현대제철",
+        "공고 제목": "26년 현대제철 하반기 일반직(신입) 채용",
+        "직무": "생산관리",
+        "근무지": "당진",
+        "지원 구분": "신입",
+        "고용 형태": "정규직",
+        "마감일": "2026-11-09",
+        "확인일": "2026-11-02",
+        "원문 URL": "https://hyundai-steel.recruiter.co.kr/career/jobs/132004",
+        "출처 구분": "기업 공식 채용 페이지",
+        "우대사항": ["제철/제강 공정 유관 전공자 우대", "영어 및 제2외국어 우수자 우대"]
+      },
+      {
+        "공고ID": "미기재",
+        "회사": "하나머티리얼즈",
+        "공고 제목": "[신입/경력] 인사(ER) 담당자 모집 공고",
+        "직무": "인사(ER)",
+        "근무지": "충남 아산시",
+        "지원 구분": "신입/경력",
+        "고용 형태": "정규직",
+        "마감일": "2026-11-18 23:59",
+        "확인일": "2026-06-06",
+        "원문 URL": "https://hanamts.career.greetinghr.com/ko/o/240080",
+        "출처 구분": "미기재",
+        "우대사항": ["인사/노무 관련 자격증 소지자 우대", "제조업 인사 실무 경험자 우대"]
+      },
+      {
+        "공고ID": "4조-박지철",
+        "회사": "현대종합금속(주)",
+        "공고 제목": "현대종합금속(주) 신입사원 모집",
+        "직무": "포항공장 설비(건축)담당",
+        "근무지": "포항",
+        "지원 구분": "신입",
+        "고용 형태": "정규직",
+        "마감일": "2026-11-08 23:59",
+        "확인일": "2026-11-02",
+        "원문 URL": "https://hyundaiweld.saramin.co.kr/apply_site/recruit/view",
+        "출처 구분": "현대종합금속 채용공고",
+        "우대사항": ["건축/설비 관련 전공자 우대", "관련 자격증 소지자 우대"]
+      }
+    ];
+
+    const TODAY = new Date('2026-11-02T00:00:00+09:00');
+    let currentTab = 'all';
+    const favoriteIds = new Set(JSON.parse(localStorage.getItem('job_favorites') || '[]'));
+    let userCompetencies = localStorage.getItem('user_competencies') || '회로, 제어, 연구개발, 인사';
+
+    function toggleFavorite(id) {
+      if (favoriteIds.has(id)) {
+        favoriteIds.delete(id);
+      } else {
+        favoriteIds.add(id);
+      }
+      localStorage.setItem('job_favorites', JSON.stringify(Array.from(favoriteIds)));
+      updateFavoriteBadge();
+      renderJobs();
+    }
+
+    function updateFavoriteBadge() {
+      document.getElementById('favoriteCountBadge').textContent = favoriteIds.size;
+    }
+
+    function saveCompetencies() {
+      const val = document.getElementById('competencyInput').value;
+      userCompetencies = val;
+      localStorage.setItem('user_competencies', val);
+      renderJobs();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabAll = document.getElementById('tabAll');
+      const tabFavorites = document.getElementById('tabFavorites');
+      const tabMypage = document.getElementById('tabMypage');
+
+      const statsSection = document.getElementById('statsSection');
+      const urgentSection = document.getElementById('urgentSection');
+      const criteriaSection = document.getElementById('criteriaSection');
+      const filterSection = document.getElementById('filterSection');
+      const countBar = document.getElementById('countBar');
+      const mypageContainer = document.getElementById('mypageContainer');
+
+      tabAll.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all";
+      tabFavorites.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5";
+      tabMypage.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5";
+
+      if (tab === 'all') {
+        tabAll.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-indigo-600 text-indigo-600 transition-all";
+        statsSection.classList.remove('hidden');
+        urgentSection.classList.remove('hidden');
+        criteriaSection.classList.remove('hidden');
+        filterSection.classList.remove('hidden');
+        countBar.classList.remove('hidden');
+        mypageContainer.classList.add('hidden');
+      } else if (tab === 'favorites') {
+        tabFavorites.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-indigo-600 text-indigo-600 transition-all flex items-center justify-center gap-1.5";
+        statsSection.classList.remove('hidden');
+        urgentSection.classList.remove('hidden');
+        criteriaSection.classList.remove('hidden');
+        filterSection.classList.remove('hidden');
+        countBar.classList.remove('hidden');
+        mypageContainer.classList.add('hidden');
+      } else {
+        tabMypage.className = "flex-1 py-3 text-center font-bold text-base border-b-2 border-indigo-600 text-indigo-600 transition-all flex items-center justify-center gap-1.5";
+        statsSection.classList.add('hidden');
+        urgentSection.classList.add('hidden');
+        criteriaSection.classList.add('hidden');
+        filterSection.classList.add('hidden');
+        countBar.classList.add('hidden');
+        mypageContainer.classList.remove('hidden');
+        document.getElementById('competencyInput').value = userCompetencies;
+      }
+      renderJobs();
+    }
+
+    function parseDate(deadlineStr, confirmDateStr) {
+      if (!deadlineStr || deadlineStr === "미기재") return null;
+      let fullDateStr = deadlineStr.trim();
+      if (/^\d{2}:\d{2}$/.test(fullDateStr)) {
+        fullDateStr = `${confirmDateStr} ${fullDateStr}`;
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fullDateStr)) {
+        fullDateStr = `${fullDateStr} 23:59`;
+      }
+      const parsedDate = new Date(fullDateStr.replace(/-/g, '/'));
+      return isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+
+    function getDDayInfo(deadlineDate) {
+      if (!deadlineDate) {
+        return { isClosed: false, dDayText: '상시모집', diffDays: 999, badgeClass: 'bg-slate-100 text-slate-700', isUrgent: false };
+      }
+      const diffMs = deadlineDate.getTime() - TODAY.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMs < 0) {
+        return { isClosed: true, dDayText: '마감', diffDays: -99999, badgeClass: 'bg-slate-300 text-slate-700', isUrgent: false };
+      } else if (diffDays === 0) {
+        return { isClosed: false, dDayText: 'D-Day (오늘 마감)', diffDays: 0, badgeClass: 'bg-red-600 text-white font-bold animate-bounce', isUrgent: true };
+      } else if (diffDays <= 3) {
+        return { isClosed: false, dDayText: `D-${diffDays}`, diffDays: diffDays, badgeClass: 'bg-red-500 text-white font-bold', isUrgent: true };
+      } else {
+        return { isClosed: false, dDayText: `D-${diffDays}`, diffDays: diffDays, badgeClass: 'bg-indigo-600 text-white font-semibold', isUrgent: false };
+      }
+    }
+
+    const processedJobs = rawJobsData.map((job, idx) => {
+      const uniqueId = job["공고ID"] && job["공고ID"] !== "미기재" ? job["공고ID"] : `job-idx-${idx}`;
+      const employmentType = job["고용 형태"] || job["고용형태"] || "미기재";
+      let cleanUrl = (job["원문 URL"] || "").trim();
+      cleanUrl = cleanUrl.replace(/^\[(.*)\]\(.*\)$/, '$1').replace(/^\[|\]$/g, '');
+
+      const parsedDeadline = parseDate(job["마감일"], job["확인일"]);
+      const dDayInfo = getDDayInfo(parsedDeadline);
+
+      return {
+        ...job,
+        uniqueId,
+        "고용 형태": employmentType,
+        "원문 URL": cleanUrl,
+        parsedDeadline,
+        ...dDayInfo
+      };
+    });
+
+    function updateUrgentSummary() {
+      const urgentCount = processedJobs.filter(job => job.isUrgent && !job.isClosed).length;
+      document.getElementById('urgentCountBadge').textContent = urgentCount + '건';
+    }
+
+    function initFilters() {
+      const supportSet = new Set();
+      const locationSet = new Set();
+      const companySet = new Set();
+
+      processedJobs.forEach(job => {
+        if (job["지원 구분"]) supportSet.add(job["지원 구분"]);
+        if (job["근무지"]) locationSet.add(job["근무지"]);
+        if (job["회사"]) companySet.add(job["회사"]);
+      });
+
+      const supportFilter = document.getElementById('supportFilter');
+      supportSet.forEach(val => {
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = val;
+        supportFilter.appendChild(option);
+      });
+
+      const locationFilter = document.getElementById('locationFilter');
+      locationSet.forEach(val => {
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = val;
+        locationFilter.appendChild(option);
+      });
+
+      const companyFilter = document.getElementById('companyFilter');
+      companySet.forEach(val => {
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = val;
+        companyFilter.appendChild(option);
+      });
+
+      updateFavoriteBadge();
+      updateUrgentSummary();
+    }
+
+    function getMatchedPreferredQualifications(preferredList) {
+      if (!preferredList || preferredList.length === 0) return [];
+      const userKeywords = userCompetencies.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+      
+      return preferredList.map(pref => {
+        const prefLower = pref.toLowerCase();
+        const isMatched = userKeywords.some(kw => prefLower.includes(kw));
+        return { text: pref, isMatched };
+      });
+    }
+
+    // 유사한 다른 공고 추천 로직 (지원 구분 또는 직무 키워드가 유사한 다른 공고 2개 추출)
+    function getSimilarJobs(currentJob) {
+      return processedJobs.filter(j => 
+        j.uniqueId !== currentJob.uniqueId && 
+        !j.isClosed && 
+        (j["지원 구분"] === currentJob["지원 구분"] || j["직무"] === currentJob["직무"] || j["회사"] !== currentJob["회사"])
+      ).slice(0, 2);
+    }
+
+    function renderCardHTML(job) {
+      const isUrlValid = job["원문 URL"] && job["원문 URL"] !== "미기재" && job["원문 URL"].startsWith('http');
+      const prefList = getMatchedPreferredQualifications(job["우대사항"]);
+      const similarJobs = getSimilarJobs(job);
+
+      return `
+        <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border transition-all duration-200 ${job.isRecommended ? 'border-amber-400 ring-2 ring-amber-200/50 bg-amber-50/20' : 'border-slate-200'} ${job.isClosed ? 'opacity-60 bg-slate-50 grayscale' : 'hover:shadow-md hover:border-indigo-300'}">
+          <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button onclick="toggleFavorite('${job.uniqueId}')" class="text-2xl focus:outline-none transition-transform active:scale-125" title="관심 공고 추가/해제">
+                ${job.isFavorite ? '<span class="text-amber-500">★</span>' : '<span class="text-slate-300 hover:text-amber-400">☆</span>'}
+              </button>
+              ${job.isRecommended ? '<span class="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-500 text-white shadow-sm animate-pulse">⭐ 추천</span>' : ''}
+              ${job.isUrgent && !job.isClosed ? '<span class="text-xs font-bold px-2.5 py-1 rounded-md bg-red-600 text-white shadow-sm animate-pulse">🔥 마감 임박</span>' : ''}
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                ${job["출처 구분"]}
+              </span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                ${job["지원 구분"]}
+              </span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+                ${job["고용 형태"]}
+              </span>
+            </div>
+            <span class="text-xs sm:text-sm px-3 py-1 rounded-full ${job.badgeClass}">
+              ${job.dDayText}
+            </span>
+          </div>
+
+          <div class="mb-3 pl-1">
+            <div class="text-sm font-medium text-slate-500 mb-0.5">${job["회사"]}</div>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+              ${job["공고 제목"]}
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4 text-sm text-slate-600 mb-3 bg-slate-50/80 p-3 rounded-xl">
+            <div><span class="font-semibold text-slate-700">📌 직무:</span> ${job["직무"]}</div>
+            <div><span class="font-semibold text-slate-700">📍 근무지:</span> ${job["근무지"]}</div>
+            <div><span class="font-semibold text-slate-700">⏰ 마감일:</span> ${job["마감일"]}</div>
+            <div><span class="font-semibold text-slate-700">🗓️ 확인일:</span> ${job["확인일"]}</div>
+          </div>
+
+          <!-- 우대역량 만족도 확인 영역 -->
+          <div class="mb-4 bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl">
+            <div class="text-xs font-bold text-indigo-900 mb-1.5 flex items-center gap-1.5">
+              <span>🎯</span> 우대역량 만족도 확인 (나의 역량 매칭)
+            </div>
+            <ul class="space-y-1 text-xs sm:text-sm">
+              ${prefList.map(pref => `
+                <li class="flex items-center gap-2">
+                  <span>${pref.isMatched ? '✅' : '⚪'}</span>
+                  <span class="${pref.isMatched ? 'font-bold text-indigo-950' : 'text-slate-600'}">${pref.text}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+
+          <!-- "이런 공고도 추천해요!" 유사 공고 추천 영역 -->
+          ${similarJobs.length > 0 ? `
+            <div class="mb-4 bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+              <div class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
+                <span>💡</span> 이런 공고도 추천해요!
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${similarJobs.map(sim => `
+                  <div class="bg-white border border-slate-200 p-2.5 rounded-lg text-xs flex flex-col justify-between">
+                    <div>
+                      <span class="text-slate-500 font-semibold">${sim["회사"]}</span>
+                      <p class="font-bold text-slate-800 line-clamp-1 mt-0.5">${sim["공고 제목"]}</p>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                      <span class="text-[11px] text-indigo-600 font-medium">${sim["지원 구분"]} · ${sim["직무"]}</span>
+                      ${sim["원문 URL"] && sim["원문 URL"] !== "미기재" ? `
+                        <a href="${sim["원문 URL"]}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-bold text-indigo-600 hover:underline">원문 ↗</a>
+                      ` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="flex justify-end">
+            ${isUrlValid ? `
+              <a href="${job["원문 URL"]}" target="_blank" rel="noopener noreferrer" 
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm">
+                <span>원문 보기</span>
+                <span>↗</span>
+              </a>
+            ` : `
+              <button disabled 
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-200 text-slate-400 font-medium text-sm rounded-xl cursor-not-allowed">
+                <span>원문 없음</span>
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderJobs() {
+      const container = document.getElementById('jobCardsContainer');
+      const competencyResultsContainer = document.getElementById('competencyResultsContainer');
+      const emptyState = document.getElementById('emptyState');
+      const emptyStateText = document.getElementById('emptyStateText');
+
+      if (currentTab === 'mypage') {
+        container.innerHTML = '';
+        emptyState.classList.add('hidden');
+
+        const keywords = userCompetencies.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        
+        if (keywords.length === 0) {
+          competencyResultsContainer.innerHTML = `
+            <div class="bg-white rounded-2xl p-8 text-center border border-slate-200">
+              <p class="text-slate-500 font-medium">등록된 역량 키워드가 없습니다. 위 입력창에 키워드를 입력해 주세요.</p>
+            </div>
+          `;
+          return;
+        }
+
+        competencyResultsContainer.innerHTML = keywords.map(kw => {
+          const matchedJobs = processedJobs.filter(job => 
+            !job.isClosed && (
+              job["회사"].toLowerCase().includes(kw.toLowerCase()) ||
+              job["공고 제목"].toLowerCase().includes(kw.toLowerCase()) ||
+              job["직무"].toLowerCase().includes(kw.toLowerCase()) ||
+              job["지원 구분"].toLowerCase().includes(kw.toLowerCase())
+            )
+          ).map(job => ({ ...job, isFavorite: favoriteIds.has(job.uniqueId) }));
+
+          return `
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="text-base sm:text-lg font-bold text-indigo-900 flex items-center gap-2">
+                  <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-xl text-sm"># ${kw}</span>
+                  <span>매칭 공고 (모집 중)</span>
+                </h3>
+                <span class="text-sm font-bold text-slate-600">${matchedJobs.length}건</span>
+              </div>
+              <div class="space-y-3">
+                ${matchedJobs.length > 0 ? matchedJobs.map(job => {
+                  const isUrlValid = job["원문 URL"] && job["원문 URL"] !== "미기재" && job["원문 URL"].startsWith('http');
+                  return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-indigo-300 transition-all">
+                      <div>
+                        <div class="text-xs font-semibold text-slate-500 mb-0.5">${job["회사"]}</div>
+                        <h4 class="text-base font-bold text-slate-900">${job["공고 제목"]}</h4>
+                      </div>
+                      <div>
+                        ${isUrlValid ? `
+                          <a href="${job["원문 URL"]}" target="_blank" rel="noopener noreferrer" 
+                            class="inline-flex items-center gap-1 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg transition-all shadow-sm">
+                            <span>원문 보기</span>
+                            <span>↗</span>
+                          </a>
+                        ` : `
+                          <button disabled 
+                            class="inline-flex items-center gap-1 px-3.5 py-1.5 bg-slate-200 text-slate-400 font-medium text-sm rounded-lg cursor-not-allowed">
+                            <span>원문 없음</span>
+                          </button>
+                        `}
+                      </div>
+                    </div>
+                  `;
+                }).join('') : `
+                  <p class="text-sm text-slate-400 py-3 text-center">해당 키워드와 일치하는 진행 중인 채용 공고가 없습니다.</p>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      competencyResultsContainer.innerHTML = '';
+
+      const searchKeyword = document.getElementById('searchInput').value.toLowerCase().trim();
+      const selectedSupport = document.getElementById('supportFilter').value;
+      const selectedLocation = document.getElementById('locationFilter').value;
+      const selectedCompany = document.getElementById('companyFilter').value;
+
+      const myKeyword = document.getElementById('myKeyword').value.toLowerCase().trim();
+      const myLocation = document.getElementById('myLocation').value.toLowerCase().trim();
+      const mySupport = document.getElementById('mySupport').value;
+
+      let filtered = processedJobs.map(job => {
+        let isRecommended = false;
+        if (myKeyword || myLocation || mySupport) {
+          const matchKw = !myKeyword || 
+            job["회사"].toLowerCase().includes(myKeyword) ||
+            job["공고 제목"].toLowerCase().includes(myKeyword) ||
+            job["직무"].toLowerCase().includes(myKeyword);
+          const matchLoc = !myLocation || job["근무지"].toLowerCase().includes(myLocation);
+          const matchSup = !mySupport || job["지원 구분"].includes(mySupport);
+          
+          if (matchKw && matchLoc && matchSup) {
+            isRecommended = true;
+          }
+        }
+        const isFavorite = favoriteIds.has(job.uniqueId);
+        return { ...job, isRecommended, isFavorite };
+      }).filter(job => {
+        if (currentTab === 'favorites' && !job.isFavorite) {
+          return false;
+        }
+
+        const matchSearch = !searchKeyword || 
+          job["회사"].toLowerCase().includes(searchKeyword) ||
+          job["공고 제목"].toLowerCase().includes(searchKeyword) ||
+          job["직무"].toLowerCase().includes(searchKeyword) ||
+          job["근무지"].toLowerCase().includes(searchKeyword) ||
+          job["출처 구분"].toLowerCase().includes(searchKeyword);
+
+        const matchSupport = selectedSupport === "전체" || job["지원 구분"] === selectedSupport;
+        const matchLocation = selectedLocation === "전체" || job["근무지"] === selectedLocation;
+        const matchCompany = selectedCompany === "전체" || job["회사"] === selectedCompany;
+
+        return matchSearch && matchSupport && matchLocation && matchCompany;
+      });
+
+      const statTotal = filtered.length;
+      const statActive = filtered.filter(j => !j.isClosed).length;
+      const statClosed = filtered.filter(j => j.isClosed).length;
+      const statNewbie = filtered.filter(j => j["지원 구분"].includes("신입")).length;
+
+      document.getElementById('statTotal').textContent = statTotal;
+      document.getElementById('statActive').textContent = statActive;
+      document.getElementById('statClosed').textContent = statClosed;
+      document.getElementById('statNewbie').textContent = statNewbie;
+
+      filtered.sort((a, b) => {
+        if (a.isRecommended && !b.isRecommended) return -1;
+        if (!a.isRecommended && b.isRecommended) return 1;
+
+        if (a.isClosed && !b.isClosed) return 1;
+        if (!a.isClosed && b.isClosed) return -1;
+        
+        const sortOrder = document.getElementById('sortOrder').value;
+        const timeA = a.parsedDeadline ? a.parsedDeadline.getTime() : 9999999999999;
+        const timeB = b.parsedDeadline ? b.parsedDeadline.getTime() : 9999999999999;
+
+        if (sortOrder === 'asc') {
+          return timeA - timeB;
+        } else if (sortOrder === 'desc') {
+          return timeB - timeA;
+        } else {
+          // 기본: 마감 임박순 (diffDays 기준)
+          if (a.diffDays !== undefined && b.diffDays !== undefined) {
+            return a.diffDays - b.diffDays;
+          }
+          return 0;
+        }
+      });
+
+      document.getElementById('jobCount').textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyStateText.textContent = currentTab === 'favorites' 
+          ? '저장된 관심 공고가 없습니다. 카드 우측 상단의 ☆ 버튼을 눌러 추가해보세요!' 
+          : '검색 결과와 일치하는 채용 공고가 없습니다.';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      container.innerHTML = filtered.map(job => renderCardHTML(job)).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderJobs);
+    document.getElementById('supportFilter').addEventListener('change', renderJobs);
+    document.getElementById('locationFilter').addEventListener('change', renderJobs);
+    document.getElementById('companyFilter').addEventListener('change', renderJobs);
+    document.getElementById('sortOrder').addEventListener('change', renderJobs);
+    
+    document.getElementById('myKeyword').addEventListener('input', renderJobs);
+    document.getElementById('myLocation').addEventListener('input', renderJobs);
+    document.getElementById('mySupport').addEventListener('change', renderJobs);
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '전체';
+      document.getElementById('supportFilter').value = '전체';
+      document.getElementById('locationFilter').value = '전체';
+      document.getElementById('companyFilter').value = '전체';
+      document.getElementById('myKeyword').value = '';
+      document.getElementById('myLocation').value = '';
+      document.getElementById('mySupport').value = '';
+      renderJobs();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initFilters();
+      renderJobs();
+    });
+  </script>
+</body>
+</html>
